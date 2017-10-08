@@ -1,5 +1,7 @@
 {
   "expo": {
     "sdkVersion": "21.0.0"
-  }
+  },
+  "name": "CMB_Women_Safety",
+  "displayName": "CMB_Women_Safety"
 }
