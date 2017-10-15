@@ -9,6 +9,8 @@ client = MongoClient(port=27017)
 db=client.user
 usersCollection = db.usersCollection
 
+app.run(host="35.187.228.106", port="5000")
+
 app = Flask(__name__)
 
 @app.route('/')
