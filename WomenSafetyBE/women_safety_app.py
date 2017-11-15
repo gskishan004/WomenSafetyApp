@@ -1,50 +1,90 @@
-from flask import Flask
-import pprint
+#MONGOLAB SERVER DETAILS 
+server = 'ds149335.mlab.com:49335/cmbwsapi'
+port = 41875
+db_name = 'cmbwsdb'
+username = 'ishan'
+password = 'ishan'
 
+from flask import Flask, session, redirect, url_for, escape, request
+from datetime import datetime
 from pymongo import MongoClient
-from random import randint
-
-#Connect to MongoDB - Note: Change connection string as needed
-client = MongoClient(port=27017)
-db=client.user
-usersCollection = db.usersCollection
+import hashlib
 
 app = Flask(__name__)
-app.run(host='0.0.0.0')
 
+#DEFINE URL FOR MONGODB SERVER
+uri = "mongodb://"+username+":"+password+"@"+server
+client = MongoClient(uri)
+
+#GET DATABASE AND TABLE NAME
+db=client.cmbwsapi
+usersCollection = db.users
+lateStayCollection = db.latestay
+
+#INDEX PAGE
 @app.route('/')
 def index():
-    return "Women Safety APP"
+	return "Women Safety APP"
 
-@app.route('/userExists/<int:psid>', methods=['GET'])
-def userExists(psid):
-    if psid == 1:
-    	return "test"
-    else:
-    	return "ps != 1"
+#REGISTER ENDPOINT
+@app.route('/register', methods=['POST'])
+def register():
+	psid = request.form['psid']
+	pwd = request.form['password']
+	# hashing the password
+	m = hashlib.md5()
+	m.update(pwd.encode('utf-8'))
+	pwd = m.hexdigest()
+	#name = request.form['name']
+	#building = request.form['building']
+	managerName = request.form['managerName']
+	managerContact = request.form['managerContact']
+	user = {
+		'psid' : [psid],
+		'pwd' : [pwd],
+		 #'name' : [name],
+		 #'building' : [building],
+		'managerName' : [managerName],
+		'managerContact' : [managerContact]
+	}
+	result=usersCollection.insert_one(user)
+	return 'true'
 
-@app.route('/validate/<int:psid>/<string:pwd>', methods=['GET'])
-def validate(psid,pwd):
+#LOGIN ENDPOINT
+@app.route('/login', methods=['POST'])
+def loginpage():
+	psid = request.form['psid']
+	pwd = request.form['password']
+	m = hashlib.md5()
+	m.update(pwd.encode('utf-8'))
+	pwd = m.hexdigest()
+	data= usersCollection.find_one({'psid': psid})
+	try:
+		if (data['pwd'][0] == pwd):
+			return str(data)
+		else:
+			return "false"
+	except:
+		return "false"
 
-    data= usersCollection.find_one({'psid': psid})
-    
-    if (data['pwd'][0].encode("utf-8") == pwd):
-        return "True"
+#LOGS FOR LATE STAY 
+@app.route('/latestay', methods=['POST'])
+def lateStay():
+	psid = request.form['psid']
+	reason = request.form['reason']
+	date = request.form['date']
+	travellingTo = request.form['travellingTo']
+	travellingBy = request.form['travellingBy']
+	latestay = {
+		'psid' : [psid],
+		'reason' : [reason],
+		'date' : [date],
+		'travellingTo' : [travellingTo],
+		'travellingBy' : [travellingBy]
+	}
+	result=lateStayCollection.insert_one(latestay)
+	return 'true'
 
-    return "False"
-
-
- 
-@app.route('/register/<int:psid>/<string:pwd>/<string:role>', methods=['POST'])
-def register(psid,pwd,role):
-    user = {
-        'psid' : [psid],
-        'pwd' : [pwd],
-        'role' : [role] 
-    }
-
-    result=usersCollection.insert_one(user)
-    return 'Debug : Created ' + str(result.inserted_id)
-
+#MAIN
 if __name__ == '__main__':
-    app.run(debug=True)
+	app.run(debug=True, use_reloader=True)
